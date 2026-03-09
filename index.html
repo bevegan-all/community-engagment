@@ -172,6 +172,9 @@
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
                 
+                // Ensure data is sorted numerically by problem ID before adding to dropdown
+                data.availableTopics.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
                 const selectElement = document.getElementById('topicSelect');
                 selectElement.innerHTML = '<option value="">🔍 Search and select a topic...</option>';
                 
@@ -187,7 +190,11 @@
                 // Initialize Tom Select
                 tomSelectInstance = new TomSelect("#topicSelect",{
                     create: false,
-                    sortField: { field: "text", direction: "asc" },
+                    maxOptions: null, // Shows all available options, disables the 50 item limit
+                    sortField: {
+                        field: "$order", // Preserves the exact array order we just sorted numerically
+                        direction: "asc"
+                    },
                     placeholder: "🔍 Search and select a topic..."
                 });
 
