@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEP Topic Selection</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+    <style>
+        body { background-color: #f3f4f6; }
+        .ts-control { border-radius: 0.375rem; padding: 0.75rem; border-color: #d1d5db; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl p-8 bg-white rounded-xl shadow-lg">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">CEP Topic Selection Portal</h2>
+        
+        <form id="cepForm" class="space-y-6">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Select Problem Statement</label>
+                <select id="topicSelect" name="problemNo" placeholder="Loading topics..." required disabled>
+                    <option value="">Fetching available topics...</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <h3 class="font-semibold text-gray-700 mb-3 border-b pb-2">Student 1 (Mandatory)</h3>
+                    <div class="mb-3">
+                        <label class="block text-xs font-medium text-gray-600">Roll Number</label>
+                        <input type="text" id="s1Roll" placeholder="e.g., SE3301" required
+                               class="w-full mt-1 p-2 border border-gray-300 rounded-md uppercase focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Must be between SE3301 and SE3360</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">Full Name</label>
+                        <input type="text" id="s1Name" placeholder="Full Name" required
+                               class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <h3 class="font-semibold text-gray-700 mb-3 border-b pb-2">Student 2 (Mandatory)</h3>
+                    <div class="mb-3">
+                        <label class="block text-xs font-medium text-gray-600">Roll Number</label>
+                        <input type="text" id="s2Roll" placeholder="e.g., SE3302" required
+                               class="w-full mt-1 p-2 border border-gray-300 rounded-md uppercase focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">Full Name</label>
+                        <input type="text" id="s2Name" placeholder="Full Name" required
+                               class="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" 
+                    class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition duration-200">
+                Submit Record
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // --- PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW ---
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJVVr6W0G1LJ63SEHRqsZOmDm3WmPr5DG-q9wNxF5IfR3d7P2WlQllzqolG9ipM-iv/exec';
+        
+        let tomSelectInstance;
+
+        // Fetch available topics on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                
+                const selectElement = document.getElementById('topicSelect');
+                selectElement.innerHTML = '<option value="">Search and select a topic...</option>';
+                
+                data.availableTopics.forEach(topic => {
+                    const option = document.createElement('option');
+                    option.value = topic.id;
+                    option.text = `${topic.id} - ${topic.title}`;
+                    selectElement.appendChild(option);
+                });
+
+                selectElement.disabled = false;
+                
+                // Initialize Tom Select (Cool Searchable Dropdown)
+                tomSelectInstance = new TomSelect("#topicSelect",{
+                    create: false,
+                    sortField: { field: "text", direction: "asc" }
+                });
+
+            } catch (error) {
+                Swal.fire('Error', 'Failed to load topics. Check your internet or Web App URL.', 'error');
+            }
+        });
+
+        // Validation Function
+        function validateRollNo(rollNo) {
+            // Regex to check if it starts with SE33 followed by 01-60
+            const regex = /^SE33(0[1-9]|[1-5][0-9]|60)$/i; 
+            return regex.test(rollNo);
+        }
+
+        // Form Submission Handler
+        document.getElementById('cepForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const problemNo = document.getElementById('topicSelect').value;
+            const s1Roll = document.getElementById('s1Roll').value.trim().toUpperCase();
+            const s1Name = document.getElementById('s1Name').value.trim();
+            const s2Roll = document.getElementById('s2Roll').value.trim().toUpperCase();
+            const s2Name = document.getElementById('s2Name').value.trim();
+
+            if (!problemNo) {
+                Swal.fire('Warning', 'Please select a problem statement.', 'warning');
+                return;
+            }
+
+            if (!validateRollNo(s1Roll) || !validateRollNo(s2Roll)) {
+                Swal.fire('Invalid Roll Number', 'Roll numbers must be between SE3301 and SE3360.', 'error');
+                return;
+            }
+
+            if (s1Roll === s2Roll) {
+                Swal.fire('Invalid Entry', 'Student 1 and Student 2 cannot have the same roll number.', 'error');
+                return;
+            }
+
+            const payload = { problemNo, s1Roll, s1Name, s2Roll, s2Name };
+
+            // Submitting Animation
+            Swal.fire({
+                title: 'Submitting Record...',
+                html: 'Please wait while we update the database.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                // Fetch using text/plain to avoid CORS preflight issues on GitHub Pages
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    // Success Animation
+                    Swal.fire('Success!', result.message, 'success').then(() => {
+                        document.getElementById('cepForm').reset();
+                        tomSelectInstance.clear(); // Clear dropdown selection
+                        location.reload(); // Refresh to update the available topics list
+                    });
+                } else {
+                    // Failed Animation
+                    Swal.fire('Registration Failed', result.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Could not connect to the server.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
